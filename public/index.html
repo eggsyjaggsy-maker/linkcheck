@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>LinkVault — Cek Data Link</title>
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <img src="/icon.svg" alt="Logo LinkVault" class="brand-logo" />
+        <div>
+          <h1>LinkVault</h1>
+          <p class="brand-sub">Verifikasi Link Tertutup</p>
+        </div>
+      </div>
+
+      <div class="topbar-actions">
+        <div id="listStatusPill" class="status-pill status-loading" title="Status database Master">
+          <span class="dot"></span>
+          <span id="listStatusText">Memuat status...</span>
+        </div>
+        <button id="openMasterBtn" type="button" class="btn btn-outline btn-sm">
+          <span aria-hidden="true">🔐</span> Panel Master
+        </button>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <section class="hero-card">
+        <div class="privacy-badge">
+          <span aria-hidden="true">🛡️</span>
+          <span>Isi daftar Master bersifat rahasia &amp; tidak dapat dibuka oleh pengguna</span>
+        </div>
+
+        <div class="mode-tabs" role="tablist" aria-label="Mode Pengecekan">
+          <button
+            id="tabSingle"
+            type="button"
+            class="tab-btn active"
+            role="tab"
+            aria-selected="true"
+            aria-controls="panelSingle"
+          >
+            Cek 1 Link
+          </button>
+          <button
+            id="tabBatch"
+            type="button"
+            class="tab-btn"
+            role="tab"
+            aria-selected="false"
+            aria-controls="panelBatch"
+          >
+            Cek Banyak Link
+          </button>
+        </div>
+
+        <!-- Single Link Panel -->
+        <div id="panelSingle" class="tab-panel active" role="tabpanel" aria-labelledby="tabSingle">
+          <form id="singleCheckForm" class="single-search-form" novalidate>
+            <label for="singleLinkInput" class="sr-only">Masukkan link untuk dicek</label>
+            <div class="search-input-wrap">
+              <span class="search-icon" aria-hidden="true">🔍</span>
+              <input
+                id="singleLinkInput"
+                type="text"
+                inputmode="url"
+                autocomplete="off"
+                autocapitalize="none"
+                spellcheck="false"
+                placeholder="Masukkan link atau nama website, misal: https://contohsite.com/promo"
+              />
+              <button id="clearSingleBtn" type="button" class="icon-clear hidden" aria-label="Bersihkan input">✕</button>
+            </div>
+            <button id="singleCheckBtn" type="submit" class="btn btn-primary btn-lg">
+              Cek Link
+            </button>
+          </form>
+          <p class="helper-note">
+            Ekstensi domain (<code>.com</code>, <code>.co.id</code>, <code>.xyz</code>, dll.), subdomain, protokol, dan path otomatis diekstrak menjadi <strong>nama website</strong> untuk dicocokkan dengan daftar Master.
+          </p>
+
+          <div id="singleResultBox" class="single-result hidden" aria-live="polite"></div>
+        </div>
+
+        <!-- Batch Link Panel -->
+        <div id="panelBatch" class="tab-panel" role="tabpanel" aria-labelledby="tabBatch">
+          <div class="format-guide">
+            <div class="format-guide-header">
+              <strong>Format Input Banyak Link (Maks. 500 link/cek)</strong>
+              <button id="fillSampleBatchBtn" type="button" class="btn-link">Isi Contoh</button>
+            </div>
+            <ul>
+              <li><strong>1 link per baris</strong> (tekan Enter untuk setiap link), <em>atau</em></li>
+              <li><strong>Dipisahkan koma (<code>,</code>) atau titik koma (<code>;</code>)</strong>.</li>
+              <li>File <code>.txt</code> / <code>.csv</code> 1 kolom didukung (baris kosong &amp; awalan <code>#</code> diabaikan).</li>
+            </ul>
+          </div>
+
+          <form id="batchCheckForm" novalidate>
+            <div class="textarea-toolbar">
+              <label for="batchLinkInput">Daftar Link yang Akan Dicek</label>
+              <label class="btn btn-outline btn-xs file-label">
+                📄 Muat dari File (.txt/.csv)
+                <input id="batchFileInput" type="file" accept=".txt,.csv,text/plain,text/csv" hidden />
+              </label>
+            </div>
+            <textarea
+              id="batchLinkInput"
+              rows="7"
+              spellcheck="false"
+              placeholder="https://example.com/a&#10;example.com/b&#10;https://domain.org/item-1, https://domain.org/item-2"
+            ></textarea>
+
+            <div class="batch-actions">
+              <button id="batchCheckBtn" type="submit" class="btn btn-primary btn-lg">
+                Cek Semua Link
+              </button>
+              <button id="clearBatchBtn" type="button" class="btn btn-ghost">
+                Bersihkan
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- Batch Results Section -->
+      <section id="batchResultsSection" class="results-card hidden" aria-live="polite">
+        <div class="results-header">
+          <div>
+            <h2>Hasil Pengecekan</h2>
+            <p id="batchResultSubtitle" class="muted-text"></p>
+          </div>
+          <div class="results-export">
+            <button id="copyResultsBtn" type="button" class="btn btn-outline btn-sm">Salin Hasil</button>
+            <button id="exportCsvBtn" type="button" class="btn btn-outline btn-sm">Unduh CSV</button>
+          </div>
+        </div>
+
+        <div class="summary-grid" id="summaryGrid">
+          <div class="stat-box">
+            <span class="stat-label">Total Dicek</span>
+            <strong class="stat-val" id="statTotal">0</strong>
+          </div>
+          <div class="stat-box stat-match">
+            <span class="stat-label">Bagian dari List</span>
+            <strong class="stat-val" id="statMatched">0</strong>
+          </div>
+          <div class="stat-box stat-miss">
+            <span class="stat-label">Bukan Bagian List</span>
+            <strong class="stat-val" id="statNotMatched">0</strong>
+          </div>
+          <div class="stat-box stat-invalid">
+            <span class="stat-label">Format Invalid</span>
+            <strong class="stat-val" id="statInvalid">0</strong>
+          </div>
+        </div>
+
+        <div class="filter-bar" role="group" aria-label="Filter hasil">
+          <button type="button" class="filter-pill active" data-filter="all">Semua</button>
+          <button type="button" class="filter-pill" data-filter="matched">Bagian dari List</button>
+          <button type="button" class="filter-pill" data-filter="not-matched">Bukan Bagian List</button>
+          <button type="button" class="filter-pill" data-filter="invalid">Invalid</button>
+        </div>
+
+        <div class="table-wrap">
+          <table class="results-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Link Input</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="batchResultsBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Master Modal -->
+  <div id="masterModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="masterModalTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <h2 id="masterModalTitle">🔐 Panel Master</h2>
+          <p class="muted-text">Unggah &amp; kelola daftar link tertutup</p>
+        </div>
+        <button id="closeMasterBtn" type="button" class="icon-btn" aria-label="Tutup panel Master">✕</button>
+      </div>
+
+      <!-- Login View -->
+      <div id="masterLoginView" class="modal-body">
+        <form id="masterLoginForm" class="stack-form">
+          <label for="masterPasswordInput">Password Master</label>
+          <input
+            id="masterPasswordInput"
+            type="password"
+            autocomplete="current-password"
+            placeholder="Masukkan password Master"
+            required
+          />
+          <div id="masterLoginError" class="alert-error hidden"></div>
+          <button type="submit" class="btn btn-primary btn-full">Masuk sebagai Master</button>
+        </form>
+      </div>
+
+      <!-- Authenticated Master Workspace -->
+      <div id="masterWorkspaceView" class="modal-body hidden">
+        <div class="master-status-bar">
+          <div>
+            <span class="muted-text">Total tersimpan saat ini:</span>
+            <strong id="masterTotalCount">0</strong> link
+          </div>
+          <button id="masterLogoutBtn" type="button" class="btn btn-outline btn-xs">Keluar</button>
+        </div>
+
+        <form id="masterUploadForm" class="stack-form">
+          <div class="format-guide compact">
+            <strong>Format Upload Master</strong>: Masukkan <strong>nama website</strong> tanpa ekstensi (misal: <code>contohsite</code>), 1 per baris atau dipisah koma/titik koma (<code>.txt</code> / <code>.csv</code>). Jika berisi link lengkap, sistem otomatis mengambil nama websitenya. Data tersimpan tertutup di server.
+          </div>
+
+          <div class="upload-zone" id="masterDropZone">
+            <input id="masterFileInput" type="file" accept=".txt,.csv,text/plain,text/csv" hidden />
+            <p>Seret file <code>.txt</code> / <code>.csv</code> ke sini atau</p>
+            <button id="pickMasterFileBtn" type="button" class="btn btn-outline btn-sm">Pilih File</button>
+            <span id="masterFileName" class="muted-text"></span>
+          </div>
+
+          <label for="masterTextInput">Atau tempel daftar nama website langsung:</label>
+          <textarea
+            id="masterTextInput"
+            rows="6"
+            spellcheck="false"
+            placeholder="contohsite&#10;tokodummy&#10;mitra-portal"
+          ></textarea>
+
+          <div class="radio-row">
+            <label class="radio-card">
+              <input type="radio" name="uploadMode" value="replace" checked />
+              <span>
+                <strong>Ganti Semua (Replace)</strong>
+                <small>Hapus list lama, pakai list baru</small>
+              </span>
+            </label>
+            <label class="radio-card">
+              <input type="radio" name="uploadMode" value="append" />
+              <span>
+                <strong>Tambahkan (Append)</strong>
+                <small>Gabungkan ke list yang ada</small>
+              </span>
+            </label>
+          </div>
+
+          <div id="masterUploadFeedback" class="hidden"></div>
+
+          <div class="modal-actions">
+            <button id="masterUploadBtn" type="submit" class="btn btn-primary">Upload ke Database</button>
+            <button id="masterClearBtn" type="button" class="btn btn-danger-outline">Kosongkan List</button>
+          </div>
+        </form>
+
+        <div class="logs-section">
+          <h3>Riwayat Upload Terakhir</h3>
+          <div id="masterLogsList" class="logs-list muted-text">Memuat riwayat...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

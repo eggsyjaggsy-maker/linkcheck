@@ -1,0 +1,13 @@
+{
+  "name": "link-checker-app",
+  "version": "1.0.0",
+  "description": "Web App untuk cek link terhadap daftar rahasia yang diunggah oleh Master",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
